@@ -4,7 +4,7 @@
 		"android": "2.2091"
 	},
 	"version": "v1.1.0",
-	"id": "chxrcky.JBot",
+	"id": "chxrcky.jbot",
 	"name": "JBot",
 	"developer": "ChxrCky",
 	"description": "In-level stats panel (avg / peak / min update time) built entirely in hand-written assembly.",
