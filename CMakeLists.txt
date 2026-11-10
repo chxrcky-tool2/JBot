@@ -9,7 +9,7 @@ else()
     set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
 endif()
 
-project(JBot VERSION 1.1.0 LANGUAGES C CXX ASM)
+project(JBot VERSION 0.0.1 LANGUAGES C CXX ASM)
 
 file(GLOB SOURCES CONFIGURE_DEPENDS src/*.cpp)
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
