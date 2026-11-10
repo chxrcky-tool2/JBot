@@ -9,15 +9,16 @@ else()
     set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
 endif()
 
-project(JBot VERSION 0.0.1 LANGUAGES C CXX ASM)
+project(JBot VERSION 1.1.0 LANGUAGES C CXX ASM)
 
 file(GLOB SOURCES CONFIGURE_DEPENDS src/*.cpp)
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 # Assembly is only built for Android arm64; every other target uses the C++ fallback in ticks.hpp
 if (ANDROID AND (CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64"))
-    target_sources(${PROJECT_NAME} PRIVATE src/asm/ticks_arm64.S)
-    set_source_files_properties(src/asm/ticks_arm64.S PROPERTIES LANGUAGE ASM)
+    file(GLOB ASM_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/*.S)
+    target_sources(${PROJECT_NAME} PRIVATE ${ASM_SOURCES})
+    set_source_files_properties(${ASM_SOURCES} PROPERTIES LANGUAGE ASM)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ASMPROF_HAS_ASM=1)
     message(STATUS "JBot: using arm64 assembly")
 else()
