@@ -142,13 +142,11 @@
     mov  x20, x0
     cbz  x20, 9f
 
-    mov  x0, x20
-    mov  w1, #TAG_PANEL
-    bl   _ZN7cocos2d6CCNode6setTagEi                    // CCNode::setTag(int)
     mov  x0, x19
     mov  x1, x20
     mov  w2, #PANEL_Z
-    bl   _ZN7cocos2d6CCNode8addChildEPS0_i              // CCNode::addChild(CCNode*, int)
+    mov  w3, #TAG_PANEL
+    bl   _ZN7cocos2d6CCNode8addChildEPS0_ii             // CCNode::addChild(CCNode*, int z, int tag)
 
     // four lines: title + avg/peak/min
     mov  w22, #0
@@ -184,13 +182,11 @@
     add  x1, sp, #48
     bl   _ZN7cocos2d6CCNode11setPositionERKNS_7CCPointE      // CCNode::setPosition(const CCPoint&)
 
-    mov  x0, x21
-    add  w1, w22, #TAG_TITLE
-    bl   _ZN7cocos2d6CCNode6setTagEi
     mov  x0, x20
     mov  x1, x21
     mov  w2, #1
-    bl   _ZN7cocos2d6CCNode8addChildEPS0_i
+    add  w3, w22, #TAG_TITLE
+    bl   _ZN7cocos2d6CCNode8addChildEPS0_ii
 2:  add  w22, w22, #1
     cmp  w22, #4
     b.lo 1b
