@@ -288,8 +288,18 @@ asmprof_panel_frame:
     bl   _ZN7cocos2d6CCNode8setScaleEf                  // CCNode::setScale(float)
 
     // top-left corner: pos = (6, winH - 6 - 116 * scale)
-    bl   _ZN7cocos2d10CCDirector14sharedDirectorEv      // CCDirector::sharedDirector()
-    bl   _ZN7cocos2d10CCDirector10getWinSizeEv          // CCDirector::getWinSize() -> s0 = w, s1 = h
+    //
+    // CCSize has a user-provided copy constructor, so under AAPCS64 it is NOT
+    // returned in s0/s1. getWinSize() returns it through memory: the caller
+    // passes the address of the result buffer in x8 (the indirect result
+    // register) and `this` in x0. x8 is not preserved across calls, so it must
+    // be set right before the call. The old code left x8 as whatever the
+    // previous code put there, and getWinSize() copied the CCSize to that
+    // garbage address -> SIGSEGV in CCSize::CCSize(CCSize const&).
+    bl   _ZN7cocos2d10CCDirector14sharedDirectorEv      // CCDirector::sharedDirector() -> x0
+    add  x8, sp, #128                                   // x8 = &CCSize result {w, h} (8 bytes at sp+128)
+    bl   _ZN7cocos2d10CCDirector10getWinSizeEv          // CCSize CCDirector::getWinSize()  (sret via x8)
+    ldp  s0, s1, [sp, #128]                             // s0 = w, s1 = h
     ldr  s2, [sp, #64]
     movz w0, #0x42E8, lsl #16       // 116.0f
     fmov s3, w0
