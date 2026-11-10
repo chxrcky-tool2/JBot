@@ -9,7 +9,7 @@ else()
     set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
 endif()
 
-project(AsmProfiler VERSION 1.0.0 LANGUAGES C CXX ASM)
+project(JBot VERSION 0.0.1 LANGUAGES C CXX ASM)
 
 file(GLOB SOURCES CONFIGURE_DEPENDS src/*.cpp)
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
@@ -19,9 +19,9 @@ if (ANDROID AND (CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a" OR CMAKE_SYSTEM_PRO
     target_sources(${PROJECT_NAME} PRIVATE src/asm/ticks_arm64.S)
     set_source_files_properties(src/asm/ticks_arm64.S PROPERTIES LANGUAGE ASM)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ASMPROF_HAS_ASM=1)
-    message(STATUS "AsmProfiler: using arm64 assembly")
+    message(STATUS "JBot: using arm64 assembly")
 else()
-    message(STATUS "AsmProfiler: using C++ fallback")
+    message(STATUS "JBot: using C++ fallback")
 endif()
 
 if (NOT DEFINED ENV{GEODE_SDK})
