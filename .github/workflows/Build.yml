@@ -1,0 +1,22 @@
+name: Build Geode Mod
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # This pulls the official Geode build environment
+    - name: Setup Geode SDK
+      uses: geode-sdk/build-geode-mod@main
+      with:
+        # This targets Android ARM64 and ARM32
+        target: android
