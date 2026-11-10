@@ -3,9 +3,9 @@
 	"gd": {
 		"android": "2.2091"
 	},
-	"version": "v1.0.0",
-	"id": "chxrcky.asmprof",
-	"name": "Asm Profiler",
+	"version": "v0.0.1",
+	"id": "chxrcky.JBot",
+	"name": "JBot",
 	"developer": "ChxrCky",
 	"description": "Tiny in-level HUD that times the game update loop using a hand-written assembly tick counter.",
 	"settings": {
