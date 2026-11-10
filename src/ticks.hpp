@@ -7,6 +7,8 @@ extern "C" {
     uint64_t asmprof_ticks();
     uint64_t asmprof_freq();
     uint64_t asmprof_ema(uint64_t avg, uint64_t sample);
+    // panel_arm64.S: stats + cocos2d panel, all in assembly
+    void asmprof_panel_frame(void* parent, uint64_t spent, uint32_t enabled, float scale);
 }
 
 namespace asmprof {
@@ -16,6 +18,9 @@ namespace asmprof {
         return f ? f : 19200000ull;
     }
     inline uint64_t ema(uint64_t avg, uint64_t sample) { return asmprof_ema(avg, sample); }
+    inline void panel_frame(void* parent, uint64_t spent, bool enabled, float scale) {
+        asmprof_panel_frame(parent, spent, enabled ? 1u : 0u, scale);
+    }
 }
 
 #else
@@ -33,6 +38,8 @@ namespace asmprof {
         int64_t d = static_cast<int64_t>(sample) - static_cast<int64_t>(avg);
         return static_cast<uint64_t>(static_cast<int64_t>(avg) + (d >> 4));
     }
+    // no panel on targets without the assembly implementation
+    inline void panel_frame(void*, uint64_t, bool, float) {}
 }
 
 #endif
