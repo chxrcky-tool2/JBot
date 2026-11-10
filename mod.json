@@ -1,0 +1,27 @@
+{
+	"geode": "6.0.0-alpha.1",
+	"gd": {
+		"android": "2.2091"
+	},
+	"version": "v1.0.0",
+	"id": "chxrcky.asmprof",
+	"name": "Asm Profiler",
+	"developer": "ChxrCky",
+	"description": "Tiny in-level HUD that times the game update loop using a hand-written assembly tick counter.",
+	"settings": {
+		"show-hud": {
+			"type": "bool",
+			"name": "Show HUD",
+			"description": "Show the update-time readout in levels.",
+			"default": true
+		},
+		"hud-scale": {
+			"type": "float",
+			"name": "HUD scale",
+			"description": "Size of the readout.",
+			"default": 0.4,
+			"min": 0.2,
+			"max": 1.0
+		}
+	}
+}
