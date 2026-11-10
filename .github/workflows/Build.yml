@@ -9,14 +9,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-          - name: Android64
-            target: Android64
-
-    name: Build ${{ matrix.config.name }}
 
     steps:
       - name: Checkout Code
@@ -25,4 +17,11 @@ jobs:
       - name: Build Geode Mod
         uses: geode-sdk/build-geode-mod@main
         with:
-          target: ${{ matrix.config.target }}
+          target: Android64
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChxrCky-Android64
+          path: build/*.geode
+          if-no-files-found: error
