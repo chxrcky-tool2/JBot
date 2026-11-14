@@ -5,18 +5,15 @@
 
 using namespace geode::prelude;
 
-static_assert(!std::is_trivially_copy_constructible_v<cocos2d::CCSize>,
-              "CCSize is returned in s0/s1 here; panel_arm64.S assumes sret via x8");
-
 $on_mod(Loaded) {
     jbot::loadState();
 }
 
 class $modify(ProfGameLayer, GJBaseGameLayer) {
     void update(float dt) {
-        uint64_t t0 = asmprof::ticks();
+        uint64_t t0 = jbot::prof::ticks();
         GJBaseGameLayer::update(dt);
-        uint64_t spent = asmprof::ticks() - t0;
+        uint64_t spent = jbot::prof::ticks() - t0;
 
         static uint32_t counter = 0;
         static bool show = true;
@@ -29,6 +26,6 @@ class $modify(ProfGameLayer, GJBaseGameLayer) {
 
         auto pl = typeinfo_cast<PlayLayer*>(this);
         void* parent = (pl && pl->m_uiLayer) ? static_cast<CCNode*>(pl->m_uiLayer) : nullptr;
-        asmprof::panel_frame(parent, spent, show, scale);
+        jbot::prof::frame(parent, spent, show, scale);
     }
 };

@@ -269,9 +269,18 @@ class $modify(JBPauseLayer, PauseLayer) {
         PauseLayer::customSetup();
 
         auto win = CCDirector::sharedDirector()->getWinSize();
-        auto spr = ButtonSprite::create("JBot", 44, true, "bigFont.fnt", "GJ_button_01.png", 26.f, 0.6f);
+        // The "ՋBot" name is Armenian, which GD's bitmap fonts cannot draw, so the
+        // button is a prebuilt image (resources/jbot-button.png). If that image
+        // is missing, fall back to a plain "JBot" text button so it still works.
+        CCNode* spr = CCSprite::create("jbot-button.png"_spr);
+        if (spr) {
+            spr->setScale(0.42f);
+        } else {
+            spr = ButtonSprite::create("JBot", 44, true, "bigFont.fnt", "GJ_button_01.png", 26.f, 0.6f);
+        }
         auto btn = CCMenuItemSpriteExtra::create(spr, this, menu_selector(JBPauseLayer::onJBot));
-        btn->setPosition({win.width - 40.f, win.height - 24.f});
+        btn->setID("jbot-button"_spr);
+        btn->setPosition({win.width - 46.f, win.height - 26.f});
 
         auto menu = CCMenu::create();
         menu->setPosition({0.f, 0.f});

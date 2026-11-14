@@ -1,4 +1,4 @@
-#ifndef ASMPROF_HAS_ASM
+#ifndef JBOT_ASM_REPLAY
 
 #include "replay.hpp"
 #include <algorithm>
