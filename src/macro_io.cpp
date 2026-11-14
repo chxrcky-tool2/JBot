@@ -7,6 +7,7 @@
 #include <fstream>
 #include <system_error>
 #include <vector>
+#include "frame.hpp"
 #include "replay.hpp"
 
 using namespace geode::prelude;
@@ -59,7 +60,7 @@ namespace jbot {
 
         uint32_t count = jbot_rep_count();
         float tps = jbot_rep_tps_get();
-        uint32_t reserved = 0;
+        uint32_t reserved = fe::deathsCount();  // death marker count
 
         out.write(kMagic, 4);
         out.write(reinterpret_cast<char const*>(&tps), 4);
@@ -69,6 +70,12 @@ namespace jbot {
             out.write(
                 static_cast<char const*>(jbot_rep_data()),
                 static_cast<std::streamsize>(count) * kEntrySize
+            );
+        }
+        if (reserved > 0) {
+            out.write(
+                reinterpret_cast<char const*>(fe::deathsData()),
+                static_cast<std::streamsize>(reserved) * 4
             );
         }
         out.flush();
@@ -93,11 +100,17 @@ namespace jbot {
 
         float tps = 0.f;
         uint32_t count = 0;
+        uint32_t deaths = 0;
         std::memcpy(&tps, buf.data() + 4, 4);
         std::memcpy(&count, buf.data() + 8, 4);
+        std::memcpy(&deaths, buf.data() + 12, 4);
 
-        if (count > kMaxEntries) return false;
-        if (static_cast<uint64_t>(size) != kHeaderSize + static_cast<uint64_t>(count) * kEntrySize) return false;
+        if (count > kMaxEntries || deaths > kMaxEntries) return false;
+        uint64_t inputBytes = static_cast<uint64_t>(count) * kEntrySize;
+        if (static_cast<uint64_t>(size) != kHeaderSize + inputBytes + static_cast<uint64_t>(deaths) * 4) return false;
+
+        std::vector<uint32_t> deathFrames(deaths);
+        if (deaths > 0) std::memcpy(deathFrames.data(), buf.data() + kHeaderSize + inputBytes, static_cast<size_t>(deaths) * 4);
 
         uint32_t prev = 0;
         for (uint32_t i = 0; i < count; i++) {
@@ -109,7 +122,10 @@ namespace jbot {
 
         if (!(tps >= 1.f && tps <= 100000.f) || std::isnan(tps)) tps = 240.f;
 
+        if (deaths > 0 && !fe::deathsLoad(deathFrames.data(), deaths)) return false;
+
         if (!jbot_rep_load(buf.data() + kHeaderSize, count)) return false;
+        if (deaths == 0) fe::deathsClear();
         jbot_rep_tps_set(tps);
         return true;
     }

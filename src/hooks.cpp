@@ -5,6 +5,7 @@
 #include <cmath>
 #include <vector>
 #include "control.hpp"
+#include "frame.hpp"
 #include "replay.hpp"
 #include "state.hpp"
 
@@ -14,7 +15,7 @@ namespace {
     bool g_injecting = false;
     float g_extraDelta = 0.f;
     float g_lastPitch = -1.f;
-    std::vector<uint32_t> g_checkpointFrames;
+    bool g_desyncShown = false;
 
     uint32_t frameOf(GJBaseGameLayer* layer) {
         int progress = layer->m_gameState.m_currentProgress;
@@ -39,15 +40,76 @@ namespace {
         pl->resetLevelFromStart();
     }
 
-    void syncCheckpoints(size_t live) {
-        while (g_checkpointFrames.size() > live) g_checkpointFrames.pop_back();
+    // ---- practice fix ----------------------------------------------------
+    // A checkpoint only keeps part of the player. Capture the rest right after
+    // the checkpoint is made and put it back after the checkpoint is loaded.
+    jbot::fe::PlayerSnap capture(PlayerObject* p) {
+        jbot::fe::PlayerSnap s;
+        if (!p) return s;
+        s.valid = true;
+        s.platformer = p->m_isPlatformer;
+        s.yVel = p->m_yVelocity;
+        s.xVel = p->m_platformerXVelocity;
+        s.rotation = p->getRotation();
+        s.speed = p->m_playerSpeed;
+        return s;
     }
 
-    void handleReset(uint32_t frame) {
-        g_extraDelta = 0.f;
+    void restore(PlayerObject* p, jbot::fe::PlayerSnap const& s) {
+        if (!p || !s.valid) return;
+        p->m_yVelocity = s.yVel;
+        if (s.platformer) p->m_platformerXVelocity = s.xVel;
+        p->setRotation(s.rotation);
+        p->m_playerSpeed = s.speed;
+    }
+
+    // ---- input accuracy --------------------------------------------------
+    void sendButton(GJBaseGameLayer* layer, bool down, int button, bool player2) {
+        g_injecting = true;
+        layer->handleButton(down, button, !player2);
+        g_injecting = false;
+    }
+
+    // Let go of everything the game thinks is held, so nothing sticks after a stop.
+    void releaseHeld(GJBaseGameLayer* layer) {
+        if (!layer) return;
+        for (int p = 0; p < 2; p++) {
+            uint8_t mask = jbot::fe::held(p == 1);
+            for (int b = 1; b <= 3; b++) {
+                if (mask & (1u << b)) sendButton(layer, false, b, p == 1);
+            }
+        }
+    }
+
+    // After a respawn the game has every button up. Make the macro agree with
+    // that, so the recorded and the played state never drift apart:
+    //  - Play:   re-press what the macro says is held at this frame
+    //  - Record: write a release at this frame for what the macro says is held
+    void resyncInputs(GJBaseGameLayer* layer, uint32_t frame) {
+        jbot::fe::clearHeld();
         auto m = jbot::mode();
-        if (m == jbot::Record) jbot_rep_truncate(frame);
+        if (m == jbot::Idle || !layer) return;
+        for (int p = 0; p < 2; p++) {
+            uint8_t want = jbot::fe::heldAt(jbot_rep_data(), jbot_rep_count(), frame, p == 1);
+            for (int b = 1; b <= 3; b++) {
+                if (!(want & (1u << b))) continue;
+                if (m == jbot::Play) sendButton(layer, true, b, p == 1);
+                else jbot_rep_record(frame, static_cast<uint32_t>(b), 0u, static_cast<uint32_t>(p));
+            }
+        }
+    }
+
+    void handleReset(GJBaseGameLayer* layer, uint32_t frame) {
+        g_extraDelta = 0.f;
+        g_desyncShown = false;
+        jbot::fe::expectJump();
+        auto m = jbot::mode();
+        if (m == jbot::Record) {
+            jbot_rep_truncate(frame);
+            jbot::fe::deathsTruncate(frame);
+        }
         else if (m == jbot::Play) jbot_rep_seek(frame);
+        resyncInputs(layer, frame);
     }
 }
 
@@ -57,8 +119,10 @@ namespace jbot {
         float tps = selectedTps();
         jbot_rep_mode_set(Idle);
         jbot_rep_clear();
+        jbot::fe::deathsClear();
         jbot_rep_tps_set(tps);
         jbot_rep_mode_set(Record);
+        jbot::fe::resetStats();
         restartFromStart();
         return true;
     }
@@ -66,6 +130,7 @@ namespace jbot {
     bool startPlayback() {
         if (!PlayLayer::get() || jbot_rep_count() == 0) return false;
         jbot_rep_mode_set(Play);
+        jbot::fe::resetStats();
         restartFromStart();
         return true;
     }
@@ -73,6 +138,8 @@ namespace jbot {
     void stopReplay() {
         jbot_rep_mode_set(Idle);
         g_extraDelta = 0.f;
+        releaseHeld(PlayLayer::get());
+        jbot::fe::clearHeld();
     }
 }
 
@@ -101,30 +168,33 @@ class $modify(JBGameLayer, GJBaseGameLayer) {
     }
 
     void processCommands(float dt, bool isHalfTick, bool isLastTick) {
-        if (jbot::mode() == jbot::Play && typeinfo_cast<PlayLayer*>(this)) {
-            uint32_t frame = frameOf(this);
-            uint32_t flags = 0;
-            while (jbot_rep_poll(frame, &flags)) {
-                g_injecting = true;
-                this->handleButton(
-                    (flags & 1u) != 0,
-                    static_cast<int>((flags >> 8) & 0xFFu),
-                    (flags & 2u) == 0
-                );
-                g_injecting = false;
+        bool inLevel = typeinfo_cast<PlayLayer*>(this) != nullptr;
+        if (inLevel) {
+            jbot::fe::beginStep(frameOf(this));
+            if (jbot::mode() == jbot::Play) {
+                uint32_t frame = jbot::fe::now();
+                uint32_t flags = 0;
+                while (jbot_rep_poll(frame, &flags)) {
+                    sendButton(
+                        this,
+                        (flags & 1u) != 0,
+                        static_cast<int>((flags >> 8) & 0xFFu),
+                        (flags & 2u) != 0
+                    );
+                }
             }
         }
         GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
     }
 
     void handleButton(bool down, int button, bool isPlayer1) {
-        auto m = jbot::mode();
-        if (m != jbot::Idle && typeinfo_cast<PlayLayer*>(this)) {
-            if (m == jbot::Play) {
-                if (!g_injecting) return;
-            } else {
+        if (typeinfo_cast<PlayLayer*>(this)) {
+            auto m = jbot::mode();
+            if (m == jbot::Play && !g_injecting) return;
+            if (m == jbot::Record) {
                 jbot_rep_record(frameOf(this), static_cast<uint32_t>(button), down ? 1u : 0u, isPlayer1 ? 0u : 1u);
             }
+            jbot::fe::track(!isPlayer1, button, down);
         }
         GJBaseGameLayer::handleButton(down, button, isPlayer1);
     }
@@ -133,32 +203,65 @@ class $modify(JBGameLayer, GJBaseGameLayer) {
 class $modify(JBPlayLayer, PlayLayer) {
     void destroyPlayer(PlayerObject* player, GameObject* object) {
         if (jbot::state().noclip && object != m_anticheatSpike) return;
+
+        uint32_t frame = frameOf(this);
+        auto m = jbot::mode();
+        if (m == jbot::Record) {
+            jbot::fe::deathsRecord(frame);
+        } else if (m == jbot::Play && !g_desyncShown
+                   && !jbot::fe::deathsHas(frame) && frame < jbot_rep_length()) {
+            // The macro goes on past this frame, so the run has drifted from the recording.
+            g_desyncShown = true;
+            Notification::create(fmt::format("JBot: desync, died at frame {}", frame), NotificationIcon::Warning)->show();
+        }
         PlayLayer::destroyPlayer(player, object);
     }
 
     CheckpointObject* createCheckpoint() {
+        std::vector<void const*> live;
+        if (m_checkpointArray) {
+            for (auto obj : CCArrayExt<CCObject*>(m_checkpointArray)) live.push_back(obj);
+        }
+        jbot::fe::pruneCheckpoints(live);
+
         auto cp = PlayLayer::createCheckpoint();
-        syncCheckpoints(m_checkpointArray ? m_checkpointArray->count() : 0);
-        if (cp) g_checkpointFrames.push_back(frameOf(this));
+        if (cp) {
+            jbot::fe::Snap snap;
+            snap.frame = frameOf(this);
+            snap.p[0] = capture(m_player1);
+            snap.p[1] = capture(m_player2);
+            jbot::fe::storeCheckpoint(cp, snap);
+        }
         return cp;
     }
 
     void resetLevelFromStart() {
-        g_checkpointFrames.clear();
+        jbot::fe::clearCheckpoints();
         PlayLayer::resetLevelFromStart();
     }
 
     void resetLevel() {
         PlayLayer::resetLevel();
-        if (!m_isPracticeMode) g_checkpointFrames.clear();
-        else syncCheckpoints(m_checkpointArray ? m_checkpointArray->count() : 0);
-        uint32_t frame = g_checkpointFrames.empty() ? 0u : g_checkpointFrames.back();
-        handleReset(frame);
+
+        uint32_t frame = 0;
+        if (!m_isPracticeMode) {
+            jbot::fe::clearCheckpoints();
+        } else if (m_checkpointArray && m_checkpointArray->count() > 0) {
+            auto cp = static_cast<CheckpointObject*>(m_checkpointArray->lastObject());
+            if (auto snap = jbot::fe::findCheckpoint(cp)) {
+                frame = snap->frame;
+                restore(m_player1, snap->p[0]);
+                restore(m_player2, snap->p[1]);
+            }
+        }
+        handleReset(this, frame);
     }
 
     void onQuit() {
         jbot_rep_mode_set(jbot::Idle);
-        g_checkpointFrames.clear();
+        releaseHeld(this);
+        jbot::fe::clearHeld();
+        jbot::fe::clearCheckpoints();
         g_extraDelta = 0.f;
         PlayLayer::onQuit();
     }
