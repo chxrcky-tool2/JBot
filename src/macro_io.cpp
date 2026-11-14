@@ -18,8 +18,15 @@ namespace jbot {
         constexpr uint32_t kEntrySize = 8;
         constexpr uint32_t kMaxEntries = 0x1000000u;
 
+        template <class P>
+        std::string pathToString(P const& p) {
+            if constexpr (requires { p.string(); }) return std::string(p.string());
+            else if constexpr (requires { p.toString(); }) return std::string(p.toString());
+            else return std::string(p.c_str());
+        }
+
         std::filesystem::path macroDir() {
-            return Mod::get()->getSaveDir() / "macros";
+            return std::filesystem::path(pathToString(Mod::get()->getSaveDir())) / "macros";
         }
 
         std::filesystem::path macroPath(std::string const& clean) {

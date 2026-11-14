@@ -39,6 +39,10 @@ namespace {
         pl->resetLevelFromStart();
     }
 
+    void syncCheckpoints(size_t live) {
+        while (g_checkpointFrames.size() > live) g_checkpointFrames.pop_back();
+    }
+
     void handleReset(uint32_t frame) {
         g_extraDelta = 0.f;
         auto m = jbot::mode();
@@ -96,7 +100,7 @@ class $modify(JBGameLayer, GJBaseGameLayer) {
         return out;
     }
 
-    void processCommands(float dt) {
+    void processCommands(float dt, bool isHalfTick, bool isLastTick) {
         if (jbot::mode() == jbot::Play && typeinfo_cast<PlayLayer*>(this)) {
             uint32_t frame = frameOf(this);
             uint32_t flags = 0;
@@ -110,7 +114,7 @@ class $modify(JBGameLayer, GJBaseGameLayer) {
                 g_injecting = false;
             }
         }
-        GJBaseGameLayer::processCommands(dt);
+        GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
     }
 
     void handleButton(bool down, int button, bool isPlayer1) {
@@ -134,13 +138,9 @@ class $modify(JBPlayLayer, PlayLayer) {
 
     CheckpointObject* createCheckpoint() {
         auto cp = PlayLayer::createCheckpoint();
+        syncCheckpoints(m_checkpointArray ? m_checkpointArray->count() : 0);
         if (cp) g_checkpointFrames.push_back(frameOf(this));
         return cp;
-    }
-
-    void removeLastCheckpoint() {
-        PlayLayer::removeLastCheckpoint();
-        if (!g_checkpointFrames.empty()) g_checkpointFrames.pop_back();
     }
 
     void resetLevelFromStart() {
@@ -151,6 +151,7 @@ class $modify(JBPlayLayer, PlayLayer) {
     void resetLevel() {
         PlayLayer::resetLevel();
         if (!m_isPracticeMode) g_checkpointFrames.clear();
+        else syncCheckpoints(m_checkpointArray ? m_checkpointArray->count() : 0);
         uint32_t frame = g_checkpointFrames.empty() ? 0u : g_checkpointFrames.back();
         handleReset(frame);
     }
