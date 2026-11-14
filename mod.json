@@ -3,11 +3,11 @@
 	"gd": {
 		"android": "2.2091"
 	},
-	"version": "v1.1.0",
+	"version": "v1.0.0",
 	"id": "chxrcky.jbot",
 	"name": "JBot",
 	"developer": "ChxrCky",
-	"description": "In-level stats panel (avg / peak / min update time) built entirely in hand-written assembly.",
+	"description": "Written mainly on Assembly, a mod for Geode",
 	"settings": {
 		"show-hud": {
 			"type": "bool",
