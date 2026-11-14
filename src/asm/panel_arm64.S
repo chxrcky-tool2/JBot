@@ -7,17 +7,17 @@
 //      w2 = panel enabled (0/1)
 //      s0 = panel scale
 //
-// What it does:
-//   * every call: updates avg (EMA), peak and min of the update time
-//   * every 20th call: finds (or builds) the panel under `parent`, then sets
+// What it really does:
+//   * every call updates avg (EMA), peak and min of the update time
+//   * every 20th call finds (or builds) the panel under `parent`, then sets
 //     visibility, scale, position (top-left corner) and the three text lines
 //
 // The panel is never cached as a pointer. It is looked up with
 // CCNode::getChildByTag() on the live parent each refresh, so there are no
 // dangling pointers when a level is left and a new PlayLayer is created.
 //
-// cocos2d-x functions are called through their Itanium-mangled names; the
-// signature each one stands for is written next to the call.
+// cocos2d-x functions are called through their Itanium-mangled names; thee
+// signature each one stands for is written next to the call
 
     .equ TAG_PANEL, 0x5A01
     .equ TAG_TITLE, 10
