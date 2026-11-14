@@ -1,11 +1,16 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/GJBaseGameLayer.hpp>
+#include "state.hpp"
 #include "ticks.hpp"
 
 using namespace geode::prelude;
 
 static_assert(!std::is_trivially_copy_constructible_v<cocos2d::CCSize>,
               "CCSize is returned in s0/s1 here; panel_arm64.S assumes sret via x8");
+
+$on_mod(Loaded) {
+    jbot::loadState();
+}
 
 class $modify(ProfGameLayer, GJBaseGameLayer) {
     void update(float dt) {
