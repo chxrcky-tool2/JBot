@@ -21,5 +21,6 @@ Layout:
 - `src/macro_io.cpp` - `.jb` save and load
 - `src/state.hpp` - shared settings
 - `CMakeLists.txt` - builds the `.S` files only on Android arm64
+- augh I'm tired 'src/state.hpp' hello
 
 `.jb` format: 16 byte header (`JBM1`, float tps, u32 input count, u32 reserved), then 8 bytes per input (u32 frame, u32 flags: bit 0 down, bit 1 player 2, bits 8-15 button).
