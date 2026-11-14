@@ -1,9 +1,3 @@
-// Asm Profiler - AArch64 (Android arm64-v8a), GNU assembler syntax
-//
-// uint64_t asmprof_ticks(void)  -> virtual counter, serialized with isb
-// uint64_t asmprof_freq(void)   -> counter frequency in Hz
-// uint64_t asmprof_ema(uint64_t avg, uint64_t sample)
-//          -> avg + ((sample - avg) >> 4), arithmetic shift so it works both directions
 
     .text
     .align 2
