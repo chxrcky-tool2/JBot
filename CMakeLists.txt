@@ -11,16 +11,16 @@ endif()
 
 project(JBot VERSION 1.0.0 LANGUAGES C CXX ASM)
 
-file(GLOB SOURCES CONFIGURE_DEPENDS src/*.cpp)
+file(GLOB SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-# Assembly is only built for Android arm64; every other target uses the C++ fallback in ticks.hpp
 if (ANDROID AND (CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a" OR CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64"))
     file(GLOB ASM_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/*.S)
     target_sources(${PROJECT_NAME} PRIVATE ${ASM_SOURCES})
     set_source_files_properties(${ASM_SOURCES} PROPERTIES LANGUAGE ASM)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ASMPROF_HAS_ASM=1)
-    message(STATUS "JBot: using arm64 assembly")
+    message(STATUS "JBot: using arm64 assembly for the replay engine and panel")
 else()
     message(STATUS "JBot: using C++ fallback")
 endif()

@@ -1,14 +1,25 @@
-# JBot (chxrcky.JBot) 
+# JBot (chxrcky.JBot)
 
 Geode mod for Geometry Dash 2.2091 on Geode 6.0.0-alpha.1
 
-Shows a small cocos2d panel in levels (top-left) with the avg / peak / min time, which i think is useless tbh.
-spent in `GJBaseGameLayer::update`. The panel itself is written in AArch64 assembly.
+Open the pause menu and press the JBot button in the top right to get the panel.
 
-- `src/asm/panel_arm64.S` - the panel stats, building the cocos2d nodes (CCLayerColor + 4 CCLabelBMFont),
-  layout, integer formatting and text updates. Calls cocos2d-x through mangled symbols.
-- `src/asm/ticks_arm64.S` - cycle-accurate tick read, counter frequency, moving average
-- `src/ticks.hpp` - C declarations for the asm, plus a C++ fallback (no panel) for other targets
-- `src/main.cpp` - only the `$modify` hook that times `update` and calls `asmprof_panel_frame`
-  (a Geode hook cannot be written in assembly)
-- `CMakeLists.txt` - enables ASM, builds the .S files only on Android arm64
+Panel features:
+- Record, Play, Stop for the replay engine, plus Save and Load by macro name (`.jb` files in the mod save folder, `macros/`)
+- Noclip
+- Speedhack, typed in, 0.01x to 4x, with optional speedhack audio (FMOD master pitch)
+- TPS bypass, typed in, with an on/off toggle
+
+Layout:
+- `src/asm/replay_arm64.S` - the replay engine in AArch64 assembly: input buffer, record, truncate, seek, poll, load
+- `src/asm/panel_arm64.S` - the in-level update-time panel
+- `src/asm/ticks_arm64.S` - tick counter and moving average
+- `src/replay.hpp` - C declarations for the replay engine
+- `src/replay_fallback.cpp` - C++ version of the same engine, only built when the assembly is not
+- `src/hooks.cpp` - noclip, speedhack, speedhack audio, TPS bypass and the replay hooks
+- `src/panel.cpp` - pause menu button and the panel popup
+- `src/macro_io.cpp` - `.jb` save and load
+- `src/state.hpp` - shared settings
+- `CMakeLists.txt` - builds the `.S` files only on Android arm64
+
+`.jb` format: 16 byte header (`JBM1`, float tps, u32 input count, u32 reserved), then 8 bytes per input (u32 frame, u32 flags: bit 0 down, bit 1 player 2, bits 8-15 button).
