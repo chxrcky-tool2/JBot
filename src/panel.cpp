@@ -88,13 +88,13 @@ protected:
         this->close();
     }
 
-    bool init() {
+    bool init() override {
         if (!CCLayerColor::initWithColor({0, 0, 0, 120})) return false;
         this->setTouchEnabled(true);
         this->setKeypadEnabled(true);
 
         auto win = CCDirector::sharedDirector()->getWinSize();
-        m_center = {win.width / 2.f, win.height / 2.f};
+        m_center = CCPoint(win.width / 2.f, win.height / 2.f);
 
         auto bg = cocos2d::extension::CCScale9Sprite::create("GJ_square01.png");
         bg->setContentSize({320.f, 260.f});
